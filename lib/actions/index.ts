@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import Product from "../models/product.model";
 import { scrapeAmazonProduct } from "../scraper"
-import { connectToDB } from "../scraper/mongoose";
 import { getAveragePrice, getHighestPrice, getLowestPrice } from "../utils";
+import { connectToDB } from "../mongoose";
 
 export async function scapeAndStoreProduct(productUrl: string){
   if(!productUrl) return
@@ -23,10 +23,10 @@ export async function scapeAndStoreProduct(productUrl: string){
     if(existingProduct){
       const updatedPriceHistory: any = [
         ...existingProduct.priceHistory,
-        { price: scrapedProduct.currentPrice}
+        { price: scrapedProduct.currentPrice }
       ]
 
-      product={
+      product = {
         ...scrapedProduct,
         priceHistory: updatedPriceHistory,
         lowestPrice: getLowestPrice(updatedPriceHistory),
@@ -35,7 +35,8 @@ export async function scapeAndStoreProduct(productUrl: string){
       }
     }
 
-    const newProduct = await Product.findOneAndUpdate({url: scrapedProduct.url},
+    const newProduct = await Product.findOneAndUpdate(
+      {url: scrapedProduct.url},
       product,
       {upsert: true, new: true}
     )
