@@ -46,3 +46,29 @@ export async function scapeAndStoreProduct(productUrl: string){
     throw new Error(`Failed to create/update product: ${e.message}`)
   }
 }
+
+export async function getAllProducts(){
+  try {
+    connectToDB();
+    const products = await Product.find();
+
+    return products;
+  } catch (e: any) {
+    console.log(e)
+  }
+}
+
+export async function getProductById(productId: string) {
+  try {
+    connectToDB();
+
+    const product = await Product.findOne({ _id: productId });
+
+    if(!product) return null;
+
+    return product
+
+  } catch (error) {
+    console.log(error)
+  }
+}

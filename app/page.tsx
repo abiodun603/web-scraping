@@ -4,9 +4,15 @@ import Image from "next/image";
 // ** Component
 import Searchbar from "@/components/Searchbar";
 import HeroCarousel from "@/components/HeroCarousel";
+import ProductCard from "@/components/ProductCard";
+
+//** Libs 
+import { getAllProducts } from "@/lib/actions";
 
 
-const Home: NextPage = () => {
+const Home: NextPage = async () => {
+
+  const allProducts = await getAllProducts();
   return (
     <>
       <section className="px-6 md:px-20 py-24">
@@ -42,8 +48,11 @@ const Home: NextPage = () => {
         <h2 className="section-text">Trending</h2>
 
         <div className="flex flex-wrap gap-x-8 gap-y-16">
-          {["Apple Iphone 15", "Book", "Sneakers"].map((product, index) =>(
-            <div key={index}>{product}</div>
+          { allProducts?.map((product, index) =>(
+            <ProductCard 
+              key = {product._id}
+              product = {product}
+            />
           ))}
         </div>
       </section>
@@ -51,5 +60,4 @@ const Home: NextPage = () => {
    
   );
 };
-
 export default Home
