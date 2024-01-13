@@ -1,25 +1,24 @@
-'use server'
+import { NextResponse } from "next/server";
 
 import Product from "@/lib/models/product.model";
 import { connectToDB } from "@/lib/mongoose";
 import { generateEmailBody, sendEmail } from "@/lib/nodemailer";
 import { scrapeAmazonProduct } from "@/lib/scraper";
 import { getAveragePrice, getEmailNotifType, getHighestPrice, getLowestPrice } from "@/lib/utils";
-import { NextResponse } from "next/server";
 
 
 export const maxDuration = 300; // 5 min
 export const dynamic = 'force-dynamic';
 export const revalidate = 0
 
-export async function GET(){
+export async function GET(request: Request){
   try {
     connectToDB();
 
     // ** find all prouducts
     const products = await Product.find({})
     
-    if(!products) return console.log("No Product found")
+    if(!products) throw new Error("No Product found")
 
     // 1. Scrape latest product and update DB
     /** 
@@ -60,9 +59,9 @@ export async function GET(){
             title: updatedProduct.title,
             url: updatedProduct.url,
           }
-
+          // Construct emailContent
           const emailContent = await generateEmailBody(prodcutInfo, emailNotifType)
-
+          // Get array of user emails
           const userEmails = updatedProduct.users.map((user: any) => user.email)
 
           await sendEmail(emailContent, userEmails)
@@ -76,7 +75,6 @@ export async function GET(){
       message: 'ok',
       data: updatedProducts
     })
-
 
   } catch (error) {
     
