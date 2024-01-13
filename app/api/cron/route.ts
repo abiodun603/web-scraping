@@ -1,37 +1,40 @@
 import { NextResponse } from "next/server";
 
-import { getLowestPrice, getHighestPrice, getAveragePrice, getEmailNotifType } from "@/lib/utils";
-import { connectToDB } from "@/lib/mongoose";
 import Product from "@/lib/models/product.model";
-import { scrapeAmazonProduct } from "@/lib/scraper";
+import { connectToDB } from "@/lib/mongoose";
 import { generateEmailBody, sendEmail } from "@/lib/nodemailer";
+import { scrapeAmazonProduct } from "@/lib/scraper";
+import { getAveragePrice, getEmailNotifType, getHighestPrice, getLowestPrice } from "@/lib/utils";
 
 export const maxDuration = 300; // This function can run for a maximum of 300 seconds
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function GET(request: Request) {
+export async function GET(request: Request){
+
   try {
     connectToDB();
 
-    const products = await Product.find({});
+    // ** find all prouducts
+    const products = await Product.find()
+    
+    if(!products) throw new Error("No Product found")
 
-    if (!products) throw new Error("No product fetched");
-
-    // ======================== 1 SCRAPE LATEST PRODUCT DETAILS & UPDATE DB
+    // 1. Scrape latest product and update DB
+    /** 
+     * promise.all because we want to call multiple asychronous actions at the sane time
+     * we aant to access all products in our database at the same time
+    **/
     const updatedProducts = await Promise.all(
       products.map(async (currentProduct) => {
-        // Scrape product
         const scrapedProduct = await scrapeAmazonProduct(currentProduct.url);
 
-        if (!scrapedProduct) return;
+        if(!scrapedProduct) throw new Error("No product found!!!")
 
         const updatedPriceHistory = [
           ...currentProduct.priceHistory,
-          {
-            price: scrapedProduct.currentPrice,
-          },
-        ];
+          {price: scrapedProduct.currentPrice}
+        ]
 
         const product = {
           ...scrapedProduct,
@@ -39,44 +42,41 @@ export async function GET(request: Request) {
           lowestPrice: getLowestPrice(updatedPriceHistory),
           highestPrice: getHighestPrice(updatedPriceHistory),
           averagePrice: getAveragePrice(updatedPriceHistory),
-        };
+        }
 
-        // Update Products in DB
         const updatedProduct = await Product.findOneAndUpdate(
-          {
-            url: product.url,
-          },
+          {url: product.url},
           product
         );
 
-        // ======================== 2 CHECK EACH PRODUCT'S STATUS & SEND EMAIL ACCORDINGLY
-        const emailNotifType = getEmailNotifType(
-          scrapedProduct,
-          currentProduct
-        );
+        // ** Check each product status and send email accordingly
+        const emailNotifType = getEmailNotifType(scrapedProduct, currentProduct);
+        
+        // send immediately if the updated product have a user
+        if(emailNotifType && updatedProduct.users.length > 0) {
 
-        if (emailNotifType && updatedProduct.users.length > 0) {
-          const productInfo = {
+          const prodcutInfo = {
             title: updatedProduct.title,
             url: updatedProduct.url,
-          };
+          }
           // Construct emailContent
-          const emailContent = await generateEmailBody(productInfo, emailNotifType);
+          const emailContent = await generateEmailBody(prodcutInfo, emailNotifType)
           // Get array of user emails
-          const userEmails = updatedProduct.users.map((user: any) => user.email);
-          // Send email notification
-          await sendEmail(emailContent, userEmails);
+          const userEmails = updatedProduct.users.map((user: any) => user.email)
+
+          await sendEmail(emailContent, userEmails)
         }
 
         return updatedProduct;
       })
-    );
+    )
 
     return NextResponse.json({
-      message: "Ok",
-      data: updatedProducts,
-    });
-  } catch (error: any) {
-    throw new Error(`Failed to get all products: ${error.message}`);
+      message: 'ok',
+      data: updatedProducts
+    })
+
+  } catch (error) {
+    
   }
 }
