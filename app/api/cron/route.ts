@@ -9,6 +9,7 @@ export async function GET(){
   try {
     connectToDB();
 
+    // ** find all prouducts
     const products = await Product.find({})
     
     if(!products) return console.log("No Product found")
