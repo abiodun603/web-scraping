@@ -5,6 +5,10 @@ import Product from "../models/product.model";
 import { scrapeAmazonProduct } from "../scraper"
 import { getAveragePrice, getHighestPrice, getLowestPrice } from "../utils";
 import { connectToDB } from "../mongoose";
+import { generateEmailBody, sendEmail } from "../nodemailer";
+
+// ** Types 
+import type {  User } from "@/types";
 
 export async function scapeAndStoreProduct(productUrl: string){
   if(!productUrl) return
@@ -58,6 +62,25 @@ export async function getAllProducts(){
   }
 }
 
+export async function getSimilarProducts(productId: string){
+  try {
+    connectToDB();
+
+    // fetch current product
+    const currentProduct = await Product.findById(productId);
+
+    if(!currentProduct) return null;
+
+    const similarProducts = await Product.find({
+      _id: {$ne: productId}
+    }).limit(3)
+
+    return similarProducts;
+  } catch (e: any) {
+    console.log(e)
+  }
+}
+
 export async function getProductById(productId: string) {
   try {
     connectToDB();
@@ -72,3 +95,26 @@ export async function getProductById(productId: string) {
     console.log(error)
   }
 }
+
+export async function addUserEmailToProduct(productId: string, userEmail: string) {
+  try {
+    // Send our first email
+    const product = await Product.findById(productId);
+    if(!product) return ;
+
+    const userExits = product.users.some((user: User) => user.email === userEmail);
+    console.log(productId, userEmail, productId, userExits)
+    if(!userExits) {
+      product.users.push({ email: userEmail})
+
+      await product.save();
+
+      const emailContent = await generateEmailBody(product, "WELCOME");
+
+      await sendEmail(emailContent, [userEmail]);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+}
+

@@ -48,7 +48,7 @@ const Home: NextPage = async () => {
         <h2 className="section-text">Trending</h2>
 
         <div className="flex flex-wrap gap-x-8 gap-y-16">
-          { allProducts?.map((product, index) =>(
+          {allProducts?.map((product, index) =>(
             <ProductCard 
               key = {product._id}
               product = {product}
