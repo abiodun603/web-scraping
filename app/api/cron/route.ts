@@ -1,3 +1,5 @@
+'use server'
+
 import { NextResponse } from "next/server";
 
 import Product from "@/lib/models/product.model";
@@ -6,12 +8,8 @@ import { generateEmailBody, sendEmail } from "@/lib/nodemailer";
 import { scrapeAmazonProduct } from "@/lib/scraper";
 import { getAveragePrice, getEmailNotifType, getHighestPrice, getLowestPrice } from "@/lib/utils";
 
-
-export const maxDuration = 300; // 5 min
-export const dynamic = 'force-dynamic';
-export const revalidate = 0
-
 export async function GET(request: Request){
+
   try {
     connectToDB();
 
